@@ -31,10 +31,6 @@ CELL_SIZE = 10
 
 handwriting = [[0] * COLS for _ in range(ROWS)]
 
-classification = model.predict(
-    [np.array(handwriting).reshape(1, 28, 28, 1)]
-).argmax()
-
 
 def draw(x, y):
     if x + 1 >= ROWS or y + 1 >= COLS:
@@ -101,9 +97,15 @@ while True:
         last_x = None
         last_y = None
         if not has_guessed:
-            classification = model.predict(
+            prediction = model.predict(
                 [np.array(handwriting).reshape(1, 28, 28, 1)]
-            ).argmax()
+            )[0]
+
+            classification = []
+            for number, odds in enumerate(prediction):
+                classification.append((number, odds))
+            classification.sort(key=lambda tup: tup[1])
+            classification.reverse()
             has_guessed = True
 
     # Draw each grid cell
@@ -140,18 +142,24 @@ while True:
     screen.blit(resetText, resetTextRect)
 
     if classification is not None:
-        classificationText = largeFont.render(str(classification), True, WHITE)
-        classificationRect = classificationText.get_rect()
-        grid_size = OFFSET * 2 + CELL_SIZE * COLS
-        classificationRect.center = (
-            grid_size + ((width - grid_size) / 2),
-            100
-        )
-        screen.blit(classificationText, classificationRect)
+        i = 25
+        for number, odds in classification:
+            c = (odds * 255, odds * 255, odds * 255)
+            classificationText = largeFont.render(
+                f"{number}: {round(odds*100)}%", True, c)
+            classificationRect = classificationText.get_rect()
+            grid_size = OFFSET * 2 + CELL_SIZE * COLS
+            classificationRect.center = (
+                grid_size + ((width - grid_size) / 2),
+                i
+            )
+            i += 50
+            screen.blit(classificationText, classificationRect)
 
     # Reset drawing
     if click and resetButton.collidepoint((screenY, screenX)):
         handwriting = [[0] * COLS for _ in range(ROWS)]
         classification = None
+        has_guessed = True
 
     pygame.display.flip()
